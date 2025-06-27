@@ -1,5 +1,8 @@
 {
+  "buildCommand": "bun run build || npm run build",
   "outputDirectory": "dist",
+  "installCommand": "bun install || npm install",
+  "framework": "vite",
   "rewrites": [
     {
       "source": "/(.*)",
