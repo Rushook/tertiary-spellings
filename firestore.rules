@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    // Users can read and write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow users to read competitions where they are participants
+    match /competitions/{competitionId} {
+      allow read: if request.auth != null;  // Temporarily allow all authenticated users to read for testing
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // Allow users to read and update their own notifications
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid 
+                   && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if request.auth != null && isAdmin();
+    }
+
+    // Allow anyone to create messages through the contact form
+    match /messages/{messageId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null && isAdmin();
+    }
+
+    // Allow admins full access to everything (moved to end to not override specific rules)
+    match /{document=**} {
+      allow read, write: if request.auth != null && isAdmin();
+    }
+  }
+}
